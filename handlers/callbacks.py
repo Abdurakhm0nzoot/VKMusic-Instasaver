@@ -59,8 +59,32 @@ async def cb_track_select(callback: CallbackQuery, bot: Bot) -> None:
 
     cache = get_search_cache(callback.from_user.id)
     if not cache:
-        await callback.answer("🔍 Поиск устарел. Повторите.", show_alert=True)
-        return
+        # Auto-healing: try to reconstruct cache from message text
+        msg_text = callback.message.text or callback.message.caption or ""
+        lines = msg_text.split("\n")
+        if not lines:
+            await callback.answer("🔍 Поиск устарел. Повторите.", show_alert=True)
+            return
+            
+        # First line is usually: 🔎 query or 🍃 query
+        first_line = lines[0]
+        # Remove first character (emoji) and whitespace
+        query = first_line[2:].strip() if len(first_line) > 2 else ""
+        
+        if not query:
+            await callback.answer("🔍 Поиск устарел. Повторите.", show_alert=True)
+            return
+
+        # Perform search again
+        from handlers.music_search import _search_cache
+        tracks = await music_service.search(query, count=50)
+        if not tracks:
+            await callback.answer("🔍 Треки не найдены.", show_alert=True)
+            return
+            
+        # Re-fill cache
+        cache = {"query": query, "tracks": tracks}
+        _search_cache[callback.from_user.id] = cache
 
     tracks = cache["tracks"]
     idx = page * TRACKS_PER_PAGE + index
@@ -271,9 +295,12 @@ async def cb_page(callback: CallbackQuery) -> None:
 
     cache = get_search_cache(callback.from_user.id)
     if not cache:
-        await callback.answer("🔍 Поиск устарел.", show_alert=True)
-        return
-
+        # Auto-healing using the query stored in the callback_data
+        from handlers.music_search import _search_cache
+        tracks = await music_service.search(query, count=50)
+        cache = {"query": query, "tracks": tracks}
+        _search_cache[callback.from_user.id] = cache
+    
     tracks = cache["tracks"]
     total_pages = math.ceil(len(tracks) / TRACKS_PER_PAGE)
 
@@ -419,6 +446,18 @@ async def cb_add_to_playlist(callback: CallbackQuery) -> None:
     """Add a track to user's playlist."""
     track_hash = callback.data.split(":")[1]
     cache = get_search_cache(callback.from_user.id)
+    if not cache:
+        # Auto-healing: try to reconstruct cache from message text
+        msg_text = callback.message.text or callback.message.caption or ""
+        lines = msg_text.split("\n")
+        if lines:
+            first_line = lines[0]
+            query = first_line[2:].strip() if len(first_line) > 2 else ""
+            if query:
+                from handlers.music_search import _search_cache
+                tracks = await music_service.search(query, count=50)
+                cache = {"query": query, "tracks": tracks}
+                _search_cache[callback.from_user.id] = cache
 
     title, artist = "Unknown", "Unknown"
     if cache:
@@ -584,9 +623,13 @@ async def cb_more(callback: CallbackQuery) -> None:
     query = callback.data.split(":", 1)[1]
     cache = get_search_cache(callback.from_user.id)
     if not cache:
-        await callback.answer("🔍 Повторите поиск", show_alert=True)
-        return
+        # Auto-healing using the query stored in the callback_data
+        from handlers.music_search import _search_cache
+        tracks = await music_service.search(query, count=50)
+        cache = {"query": query, "tracks": tracks}
+        _search_cache[callback.from_user.id] = cache
 
+    tracks = cache["tracks"]
     async with async_session() as session:
         user = await get_or_create_user(session, callback.from_user.id)
         lang = user.language
