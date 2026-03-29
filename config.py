@@ -15,7 +15,12 @@ class Config:
     VK_TOKEN: str = os.getenv("VK_TOKEN", "")
 
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bot.db")
+    db_url_raw = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bot.db")
+    # Если ссылка от Render начинается на postgres://, меняем на драйвер asyncpg
+    if db_url_raw.startswith("postgres://"):
+        DATABASE_URL = db_url_raw.replace("postgres://", "postgresql+asyncpg://", 1)
+    else:
+        DATABASE_URL = db_url_raw
 
     # Redis (optional)
     REDIS_URL: str = os.getenv("REDIS_URL", "")
