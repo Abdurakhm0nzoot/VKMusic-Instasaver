@@ -7,6 +7,7 @@ Entry point: initializes the bot, registers handlers, and starts polling.
 import asyncio
 import logging
 import sys
+import os
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
