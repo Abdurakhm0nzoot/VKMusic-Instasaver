@@ -16,56 +16,57 @@ def search_results_kb(
     lang: str = "ru",
 ) -> InlineKeyboardMarkup:
     """
-    Build inline keyboard for search results.
-    Grid: 4 columns × 2 rows for track selection + pagination row.
+    Build inline keyboard for search results matching specific 1-8 layout.
     """
     buttons = []
 
     # Track selection buttons (1-8 in two rows of 4)
     row1 = []
     row2 = []
-    for i in range(1, min(track_count + 1, 9)):
-        btn = InlineKeyboardButton(
-            text=str(i) + "️⃣",
-            callback_data=f"track:{page}:{i - 1}",
-        )
+    for i in range(1, 9):
+        # We always want 1-8 buttons, if track doesn't exist, we can handle it in callback or grey it out
+        # But usually we show 1-8, if only 3 tracks, 4-8 will just say 'track_not_found' or we can conditionally hide them
+        # The user wants exactly this layout. Let's show buttons 1-8. If clicked on empty, do nothing.
+        cb_data = f"track:{page}:{i - 1}" if i <= track_count else "noop"
+        btn = InlineKeyboardButton(text=str(i), callback_data=cb_data)
         if i <= 4:
             row1.append(btn)
         else:
             row2.append(btn)
 
-    if row1:
-        buttons.append(row1)
-    if row2:
-        buttons.append(row2)
+    buttons.append(row1)
+    buttons.append(row2)
 
     # Pagination row
     nav_row = []
-    if page > 0:
-        nav_row.append(
-            InlineKeyboardButton(
-                text="⬅️",
-                callback_data=f"page:prev:{query}:{page}",
-            )
-        )
-
     nav_row.append(
         InlineKeyboardButton(
-            text=f"📄 {page + 1}/{total_pages}",
-            callback_data="noop",
+            text="⬅️",
+            callback_data=f"page:prev:{query}:{page}" if page > 0 else "noop",
         )
     )
-
-    if page < total_pages - 1:
-        nav_row.append(
-            InlineKeyboardButton(
-                text="➡️",
-                callback_data=f"page:next:{query}:{page}",
-            )
+    nav_row.append(
+        InlineKeyboardButton(
+            text="❌",
+            callback_data="close_msg",
         )
+    )
+    nav_row.append(
+        InlineKeyboardButton(
+            text="➡️",
+            callback_data=f"page:next:{query}:{page}" if page < total_pages - 1 else "noop",
+        )
+    )
+    buttons.append(nav_row)
 
-    if nav_row:
-        buttons.append(nav_row)
+    # Options row: √ | BR: * | ? Lossless | Title
+    options_row = [
+        InlineKeyboardButton(text="√", callback_data="noop"),
+        InlineKeyboardButton(text="BR: *", callback_data="noop"),
+        InlineKeyboardButton(text="? Lossless", callback_data="noop"),
+        InlineKeyboardButton(text="Title", callback_data="noop"),
+    ]
+    buttons.append(options_row)
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -74,19 +75,27 @@ def search_results_kb(
 
 
 def video_actions_kb(url: str, lang: str = "ru") -> InlineKeyboardMarkup:
-    """Buttons shown under a downloaded video: [🎵 MP3] [🖼 Thumbnail]."""
+    """Buttons shown under a downloaded video."""
     # Trim URL for callback_data (max 64 bytes)
     url_hash = str(abs(hash(url)))[:12]
     buttons = [
         [
             InlineKeyboardButton(
-                text="🎵 MP3",
-                callback_data=f"vid2mp3:{url_hash}",
-            ),
+                text="💾 Saqlash",
+                callback_data=f"vid2sav:{url_hash}", # We can map this to a save playlist action
+            )
+        ],
+        [
             InlineKeyboardButton(
-                text="🖼 Thumbnail",
-                callback_data=f"vidthumb:{url_hash}",
-            ),
+                text="📥 Qo'shiqni yuklab olish",
+                callback_data=f"vid2mp3:{url_hash}",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="Guruhga qo'shish ↗️",
+                url="https://t.me/your_bot_username?startgroup=true", # Typically how add to group works
+            )
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -104,13 +113,19 @@ def track_actions_kb(
     buttons = [
         [
             InlineKeyboardButton(
-                text=t("btn_add_playlist", lang),
-                callback_data=f"addpl:{track_hash}",
+                text="❤️/💔",
+                callback_data="noop",
             ),
             InlineKeyboardButton(
-                text=t("btn_more", lang),
-                callback_data=f"more:{query}" if query else "noop",
+                text="🎛",
+                callback_data=f"addpl:{track_hash}",
             ),
+        ],
+        [
+            InlineKeyboardButton(
+                text="Guruhga qo'shish ↗️",
+                url="https://t.me/your_bot_username?startgroup=true",
+            )
         ]
     ]
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -120,14 +135,68 @@ def track_actions_kb(
 
 
 def settings_kb(
-    current_lang: str,
-    current_quality: int,
+    user,
     lang: str = "ru",
 ) -> InlineKeyboardMarkup:
-    """Settings inline keyboard with toggleable options."""
+    """Settings inline keyboard with the new requested layout."""
     buttons = []
 
-    # Language selection row
+    # 1. Language
+    buttons.append([InlineKeyboardButton(text="🌐 Язык", callback_data="set_lang")])
+
+    # 2. Bitrate Preview: √
+    bp_check = "√" if user.bitrate_preview else "❌"
+    buttons.append([InlineKeyboardButton(text=f"📊 Превью битрейта: {bp_check}", callback_data="toggle_bp")])
+
+    # 3. Likes buttons: √
+    lb_check = "√" if user.likes_buttons else "❌"
+    buttons.append([InlineKeyboardButton(text=f"❤️ Кнопки лайков: {lb_check}", callback_data="toggle_lb")])
+
+    # 4. Audio Caption
+    buttons.append([InlineKeyboardButton(text=f"🎵 Подпись к аудио: {user.audio_caption}", callback_data="toggle_caption")])
+
+    # 5. Advanced Search
+    as_check = "√" if user.advanced_search else "❌"
+    buttons.append([InlineKeyboardButton(text=f"🔍 Расширенный поиск: {as_check}", callback_data="toggle_as")])
+
+    # 6. Theme
+    buttons.append([InlineKeyboardButton(text=f"√ Тема: {user.theme}", callback_data="theme_menu")])
+
+    # 7. Close
+    buttons.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="close_msg")])
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def themes_kb() -> InlineKeyboardMarkup:
+    """Themes selection keyboard."""
+    buttons = [
+        [
+            InlineKeyboardButton(text="Нет", callback_data="settheme:none"),
+            InlineKeyboardButton(text="🍃 android", callback_data="settheme:android"),
+        ],
+        [
+            InlineKeyboardButton(text="🦄 angel_@endlesslypainful", callback_data="settheme:angel_@endlesslypainful"),
+            InlineKeyboardButton(text="🎨 autumn_@pintura_pinn", callback_data="settheme:autumn_@pintura_pinn"),
+        ],
+        [
+            InlineKeyboardButton(text="💗 pink", callback_data="settheme:pink"),
+            InlineKeyboardButton(text="pixel", callback_data="settheme:pixel"),
+        ],
+        [
+            InlineKeyboardButton(text="👾 vector", callback_data="settheme:vector"),
+        ],
+        [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data="back_settings"),
+            InlineKeyboardButton(text="❌ Закрыть", callback_data="close_msg"),
+        ]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def languages_kb(current_lang: str) -> InlineKeyboardMarkup:
+    """Language selection keyboard."""
+    buttons = []
+    
     lang_row = []
     for code in SUPPORTED_LANGUAGES:
         flag = get_language_flag(code)
@@ -139,20 +208,13 @@ def settings_kb(
             )
         )
     buttons.append(lang_row)
-
-    # Quality selection row
-    quality_row = []
-    for q in [128, 192, 320]:
-        check = "✅ " if q == current_quality else ""
-        quality_row.append(
-            InlineKeyboardButton(
-                text=f"{check}{q}",
-                callback_data=f"quality:{q}",
-            )
-        )
-    buttons.append(quality_row)
-
+    
+    buttons.append([
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="back_settings"),
+        InlineKeyboardButton(text="❌ Закрыть", callback_data="close_msg"),
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
 
 # ───────────────────────── Playlist ─────────────────────────

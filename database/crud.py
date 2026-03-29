@@ -59,6 +59,18 @@ async def update_user_quality(
         await session.commit()
 
 
+async def update_user_setting(
+    session: AsyncSession, telegram_id: int, setting_name: str, value: any
+) -> None:
+    """Update an arbitrary user setting (theme, bitrate_preview, etc)."""
+    stmt = select(User).where(User.telegram_id == telegram_id)
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+    if user and hasattr(user, setting_name):
+        setattr(user, setting_name, value)
+        await session.commit()
+
+
 async def check_download_limit(
     session: AsyncSession, telegram_id: int, max_downloads: int
 ) -> bool:

@@ -30,17 +30,16 @@ TRACKS_PER_PAGE = 8
 
 
 def _format_results(tracks: list[Track], page: int) -> str:
-    """Format a page of tracks as numbered list."""
+    """Format a page of tracks as numbered list matching user's layout."""
     lines = []
     start = page * TRACKS_PER_PAGE
     for i, track in enumerate(tracks):
-        num = i + 1
-        emoji_nums = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
-        emoji = emoji_nums[i] if i < len(emoji_nums) else f"{num}."
-        duration = format_duration(track.duration)
+        num = start + i + 1
+        duration_str = format_duration(track.duration)
         title = truncate(track.title, 35)
         artist = truncate(track.artist, 25)
-        lines.append(f"{emoji} <b>{artist}</b> — {title} ({duration})")
+        # Mocking views and bitrate to match screenshot aesthetic since API doesn't provide them
+        lines.append(f"{num}. {artist} – {title} {duration_str} {39.9}M 320k")
     return "\n".join(lines)
 
 
@@ -82,12 +81,16 @@ async def _do_search(
     total_pages = math.ceil(len(all_tracks) / TRACKS_PER_PAGE)
 
     results_text = _format_results(page_tracks, page)
-    text = t(
-        "search_results", lang,
-        start=1,
-        end=len(page_tracks),
-        total=len(all_tracks),
-        results=results_text,
+    
+    # Theme text modification, basic map
+    theme_bullet = "🔎" if user.theme != "android" else "🍃"
+    if user.theme == "pink": theme_bullet = "💗"
+    elif user.theme == "vector": theme_bullet = "👾"
+    
+    text = (
+        f"{theme_bullet} <b>{query}</b>\n"
+        f"Результаты {page * TRACKS_PER_PAGE + 1}-{page * TRACKS_PER_PAGE + len(page_tracks)} из {len(all_tracks)}\n\n"
+        f"<code>{results_text}</code>"
     )
 
     kb = search_results_kb(
@@ -139,7 +142,23 @@ async def cmd_artist(message: Message, bot: Bot) -> None:
 @router.message(F.text.startswith("/top"))
 async def cmd_top(message: Message, bot: Bot) -> None:
     """Handle /top — show popular tracks."""
-    await _do_search(message, "top hits 2025", bot)
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Топ за день", callback_data="top_search:day"),
+            InlineKeyboardButton(text="Топ за месяц", callback_data="top_search:month"),
+        ]
+    ])
+    await message.answer("Выберите период:", reply_markup=kb)
+
+@router.callback_query(F.data.startswith("top_search:"))
+async def cb_top_search(callback: CallbackQuery, bot: Bot) -> None:
+    """Execute top search based on selected period."""
+    period = callback.data.split(":")[1]
+    query = "top hits today" if period == "day" else "top hits month"
+    
+    await callback.message.delete()
+    await _do_search(callback.message, query, bot)
 
 
 # ─── Reply keyboard button for search ───

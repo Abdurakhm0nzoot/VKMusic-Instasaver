@@ -44,17 +44,8 @@ async def _show_settings(message: Message) -> None:
 
     flag = get_language_flag(lang)
 
-    text = (
-        t("settings_title", lang) + "\n\n"
-        + t("settings_language", lang, lang=lang.upper(), flag=flag) + "\n"
-        + t("settings_quality", lang, quality=user.audio_quality) + "\n"
-        + t("settings_downloads", lang, count=downloads_today, max=max_dl)
-    )
+    text = t("settings_title", lang) + "\n\nКакие опции хотите изменить?"
 
-    kb = settings_kb(
-        current_lang=lang,
-        current_quality=user.audio_quality,
-        lang=lang,
-    )
+    kb = settings_kb(user, lang)
 
     await message.answer(text, parse_mode="HTML", reply_markup=kb)

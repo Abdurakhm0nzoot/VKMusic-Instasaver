@@ -74,9 +74,13 @@ async def handle_url(message: Message, bot: Bot) -> None:
 
     if cached_file_id:
         try:
+            bot_info = await bot.get_me()
+            caption_text = f"@{bot_info.username} orqali yuklab olindi"
+
             await bot.send_video(
                 chat_id=message.chat.id,
                 video=cached_file_id,
+                caption=caption_text,
                 reply_to_message_id=message.message_id,
                 reply_markup=video_actions_kb(url, lang),
             )
@@ -110,11 +114,14 @@ async def handle_url(message: Message, bot: Bot) -> None:
     # ── Send file ──
     try:
         file = FSInputFile(result.file_path)
+        
+        bot_info = await bot.get_me()
+        caption_text = f"@{bot_info.username} orqali yuklab olindi"
 
         sent = await bot.send_video(
             chat_id=message.chat.id,
             video=file,
-            caption=f"📥 <b>{result.title}</b>" if result.title != "Unknown" else None,
+            caption=caption_text,
             duration=result.duration,
             reply_to_message_id=message.message_id,
             parse_mode="HTML",

@@ -34,6 +34,14 @@ class User(Base):
     daily_downloads: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_download_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    
+    # UI Customization Settings
+    theme: Mapped[str] = mapped_column(String(50), default="pixel", server_default="pixel")
+    bitrate_preview: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    likes_buttons: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    audio_caption: Mapped[str] = mapped_column(String(100), default="Ссылка на бота", server_default="Ссылка на бота")
+    advanced_search: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), server_default=func.now()
     )

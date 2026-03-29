@@ -114,10 +114,10 @@ class MusicService:
                 "quiet": True,
                 "no_warnings": True,
                 "extract_flat": True,
-                "default_search": "ytsearch",
+                "default_search": "ytmsearch",
             }
 
-            search_query = f"ytsearch{min(count, 20)}:{query}"
+            search_query = f"ytmsearch{min(count, 20)}:{query}"
 
             loop = asyncio.get_event_loop()
 

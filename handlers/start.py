@@ -8,7 +8,6 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 
 from database.engine import async_session
 from database.crud import get_or_create_user, update_user_language
-from keyboards.reply import main_menu_kb
 from utils.i18n import t
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,6 @@ async def cb_start_language(callback: CallbackQuery) -> None:
     await callback.message.answer(
         t("welcome", lang),
         parse_mode="HTML",
-        reply_markup=main_menu_kb(lang),
     )
 
 
