@@ -5,7 +5,7 @@ import math
 import os
 
 from aiogram import Router, F, Bot
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile, CallbackQuery
 
 from database.engine import async_session
 from database.crud import (
