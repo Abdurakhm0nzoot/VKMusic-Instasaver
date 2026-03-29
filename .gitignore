@@ -1,0 +1,35 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Downloads
+downloads/
+*.mp3
+*.mp4
+*.ogg
+*.wav
+*.webm
+
+# Database (local)
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

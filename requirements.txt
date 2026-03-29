@@ -1,0 +1,12 @@
+aiogram>=3.4,<4.0
+aiohttp>=3.9
+sqlalchemy[asyncio]>=2.0
+aiosqlite>=0.19
+asyncpg>=0.29
+yt-dlp>=2024.0
+vkpymusic>=0.3
+shazamio>=0.6
+pydantic-settings>=2.0
+python-dotenv>=1.0
+aiofiles>=23.0
+mutagen>=1.47

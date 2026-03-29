@@ -1,0 +1,25 @@
+services:
+  - type: worker
+    name: antigravity-bot
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: VK_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: antigravity-db
+          property: connectionURI
+      - key: FORCE_SUB_CHANNEL
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: MAX_FREE_DOWNLOADS
+        value: "20"
+
+databases:
+  - name: antigravity-db
+    plan: free
+    databaseName: antigravity
