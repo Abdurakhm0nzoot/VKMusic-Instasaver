@@ -16,9 +16,11 @@ class Config:
 
     # Database
     db_url_raw = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./bot.db")
-    # Если ссылка от Render начинается на postgres://, меняем на драйвер asyncpg
+    # Если ссылка от Render начинается на postgres:// или postgresql://, меняем на драйвер asyncpg
     if db_url_raw.startswith("postgres://"):
         DATABASE_URL = db_url_raw.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif db_url_raw.startswith("postgresql://"):
+        DATABASE_URL = db_url_raw.replace("postgresql://", "postgresql+asyncpg://", 1)
     else:
         DATABASE_URL = db_url_raw
 
