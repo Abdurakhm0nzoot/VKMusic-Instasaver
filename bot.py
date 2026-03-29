@@ -114,11 +114,29 @@ async def main() -> None:
 
     logger.info("✅ Bot commands and localized profiles set")
 
+    # Запуск фонового веб-сервера для Render (чтобы бот не засыпал)
+    from aiohttp import web
+    
+    async def health_check(request):
+        return web.Response(text="Bot is running! 🚀")
+
+    app = web.Application()
+    app.router.add_get("/", health_check)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"✅ Dummy Web Server started on port {port}")
+
     # Start polling
     logger.info("🚀 Antigravity Bot started!")
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
+        await runner.cleanup()
         await bot.session.close()
         logger.info("Bot stopped.")
 
