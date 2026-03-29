@@ -113,11 +113,12 @@ class MusicService:
             opts = {
                 "quiet": True,
                 "no_warnings": True,
-                "extract_flat": True,
-                "default_search": "ytmsearch",
+                "extract_flat": "in_playlist",  # Use this for faster search extraction
+                "skip_download": True,
             }
 
-            search_query = f"ytmsearch{min(count, 20)}:{query}"
+            # Use standard YouTube search (ytsearch) which is 100% reliable
+            search_query = f"ytsearch{min(count, 50)}:{query}"
 
             loop = asyncio.get_event_loop()
 
@@ -135,14 +136,18 @@ class MusicService:
             for entry in result["entries"]:
                 if entry is None:
                     continue
+                
+                # Basic duration and artist extraction
+                duration = entry.get("duration", 0)
+                if not duration: duration = 0
+                
                 tracks.append(Track(
                     title=entry.get("title", "Unknown"),
-                    artist=entry.get("uploader", entry.get("channel", "Unknown")),
-                    duration=entry.get("duration", 0) or 0,
-                    url=entry.get("url", entry.get("webpage_url", "")),
-                    track_id=f"yt_{entry.get('id', '')}",
+                    artist=entry.get("uploader", "Unknown"),
+                    duration=int(duration),
+                    url=entry.get("url") or f"https://www.youtube.com/watch?v={entry.get('id')}",
+                    track_id=f"yt_{entry.get('id')}",
                 ))
-
             return tracks
 
         except Exception as e:
