@@ -65,11 +65,17 @@ async def main() -> None:
     register_all_routers(dp)
     logger.info("✅ Handlers registered")
 
+    # ПРОВЕРКА ТОКЕНА (Для пользователя)
+    try:
+        bot_info = await bot.get_me()
+        logger.info(f"🤖 БОТ ЗАПУЩЕН! Имя: @{bot_info.username} (ID: {bot_info.id})")
+        logger.info(f"🔑 ИСПОЛЬЗУЕТСЯ ТОКЕН: {config.BOT_TOKEN.split(':')[0]}...")
+    except Exception as e:
+        logger.error(f"❌ Не удалось получить инфо о боте (Проверьте токен!): {e}")
+
     # Установка команд и профиля на 3 языках
     from aiogram.types import BotCommand
     
-    logger.info(f"🤖 Запуск бота с ID: {config.BOT_TOKEN.split(':')[0]}")
-
     try:
         # RU (Русский)
         cmds_ru = [
