@@ -99,9 +99,14 @@ class MusicService:
             "no_warnings": True,
             "extract_flat": True, # ONLY gets titles/ids (Very fast)
             "skip_download": True,
+            "socket_timeout": 10, # Убиваем поиск через 10 сек
+            "retries": 1,
+            "nocheckcertificate": True,
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         }
         
         search_query = f"ytsearch{min(count, 20)}:{query}"
+        logger.info(f"Executing YouTube search for: {query}")
         
         def _sync_search():
             with yt_dlp.YoutubeDL(opts) as ydl:
