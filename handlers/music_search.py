@@ -61,8 +61,8 @@ async def _do_search(
         t("searching", lang), parse_mode="HTML"
     )
 
-    # Search for tracks
-    all_tracks = await music_service.search(query, count=50)
+    # Search for tracks (reduced to 20 for faster response on Render)
+    all_tracks = await music_service.search(query, count=20)
 
     if not all_tracks:
         await status_msg.edit_text(

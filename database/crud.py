@@ -1,5 +1,6 @@
 import hashlib
 import json
+from dataclasses import asdict
 from datetime import date, datetime
 
 from sqlalchemy import select, delete
@@ -242,47 +243,45 @@ async def save_user_search(
     session: AsyncSession, telegram_id: int, query: str, tracks: list[Track]
 ) -> None:
     """Save user's last search results to the database (survives restarts)."""
+    """Save user search results to the database (UPSERT)."""
     # Convert Track objects to dicts for JSON storage
-    tracks_data = [
-        {
-            "title": t.title,
-            "artist": t.artist,
-            "duration": t.duration,
-            "url": t.url,
-            "track_id": t.track_id,
-            "owner_id": t.owner_id,
-        }
-        for t in tracks
-    ]
-    results_json = json.dumps(tracks_data)
+    results_json = json.dumps([asdict(t) for t in tracks])
 
+    # Try PostgreSQL UPSERT
     try:
-        # Use PostgreSQL UPSERT if possible
         from sqlalchemy.dialects.postgresql import insert
         stmt = insert(SearchResult).values(
             user_id=telegram_id,
             query=query,
             results_json=results_json,
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         ).on_conflict_do_update(
             index_elements=["user_id"],
-            set_={"query": query, "results_json": results_json, "updated_at": datetime.now()}
+            set_={
+                "query": query,
+                "results_json": results_json,
+                "updated_at": datetime.now(),
+            }
         )
         await session.execute(stmt)
-    except Exception:
-        # Fallback for SQLite or if PostgreSQL driver differs
+        await session.commit()
+    except Exception as e:
+        logger.error(f"UPSERT failed, trying manual update: {e}")
+        # Fallback: manual update
         stmt = select(SearchResult).where(SearchResult.user_id == telegram_id)
         result = await session.execute(stmt)
         record = result.scalar_one_or_none()
+
         if record:
             record.query = query
             record.results_json = results_json
             record.updated_at = datetime.now()
         else:
-            record = SearchResult(user_id=telegram_id, query=query, results_json=results_json)
+            record = SearchResult(
+                user_id=telegram_id, query=query, results_json=results_json
+            )
             session.add(record)
-    
-    await session.commit()
+        await session.commit()
 
 
 async def get_user_search(session: AsyncSession, telegram_id: int) -> dict | None:

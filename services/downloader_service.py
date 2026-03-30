@@ -43,18 +43,20 @@ class DownloaderService:
         self.download_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_video_opts(self) -> dict:
-        """Optimized yt-dlp options for FAST video downloads."""
+        """Optimized yt-dlp options with Browser masking."""
         return {
-            "format": "mp4/bestvideo+bestaudio/best", # Prioritize single file mp4 for speed
+            "format": "mp4/best",
             "outtmpl": str(self.download_dir / "%(id)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
-            "socket_timeout": 30,
-            "retries": 2,
-            "nocheckcertificate": True, # Faster SSL
+            "socket_timeout": 20, # Reduced for faster failure
+            "retries": 1,
+            "nocheckcertificate": True,
             "noplaylist": True,
-            "playlist_items": "1", # Extremely important for IG/TikTok speed
+            "playlist_items": "1",
             "merge_output_format": "mp4",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "add_header": ["Accept-Language: en-US,en;q=0.9", "Referer: https://www.google.com/"],
             "postprocessors": [
                 {
                     "key": "FFmpegVideoConvertor",
@@ -65,17 +67,18 @@ class DownloaderService:
         }
 
     def _get_audio_opts(self, quality: int = 320) -> dict:
-        """Optimized yt-dlp options for FAST audio extraction."""
+        """Optimized audio extraction with masking."""
         return {
             "format": "bestaudio/best",
             "outtmpl": str(self.download_dir / "%(id)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
-            "socket_timeout": 30,
-            "retries": 2,
+            "socket_timeout": 20,
+            "retries": 1,
             "nocheckcertificate": True,
             "noplaylist": True,
             "playlist_items": "1",
+            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -100,12 +103,17 @@ class DownloaderService:
     async def _download(
         self, url: str, opts: dict, file_type: str
     ) -> DownloadResult | None:
-        """Run yt-dlp in a thread pool to avoid blocking the event loop."""
+        """Run with strict 45-second timeout to prevent hanging."""
         try:
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, self._sync_download, url, opts, file_type
+            return await asyncio.wait_for(
+                asyncio.get_event_loop().run_in_executor(
+                    None, self._sync_download, url, opts, file_type
+                ),
+                timeout=45.0
             )
-            return result
+        except asyncio.TimeoutError:
+            logger.error(f"Download timed out for {url}")
+            return None
         except Exception as e:
             logger.error(f"Download failed for {url}: {e}")
             return None
