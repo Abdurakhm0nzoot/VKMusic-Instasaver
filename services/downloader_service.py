@@ -43,14 +43,17 @@ class DownloaderService:
         self.download_dir.mkdir(parents=True, exist_ok=True)
 
     def _get_video_opts(self) -> dict:
-        """yt-dlp options for video downloads."""
+        """Optimized yt-dlp options for FAST video downloads."""
         return {
-            "format": f"best[filesize<{self.MAX_FILESIZE}]/best",
+            "format": "mp4/bestvideo+bestaudio/best", # Prioritize single file mp4 for speed
             "outtmpl": str(self.download_dir / "%(id)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
-            "socket_timeout": 60,
-            "retries": 3,
+            "socket_timeout": 30,
+            "retries": 2,
+            "nocheckcertificate": True, # Faster SSL
+            "noplaylist": True,
+            "playlist_items": "1", # Extremely important for IG/TikTok speed
             "merge_output_format": "mp4",
             "postprocessors": [
                 {
@@ -58,19 +61,21 @@ class DownloaderService:
                     "preferedformat": "mp4",
                 }
             ],
-            # Limit duration to 15 minutes for videos
             "match_filter": yt_dlp.utils.match_filter_func("duration < 900"),
         }
 
     def _get_audio_opts(self, quality: int = 320) -> dict:
-        """yt-dlp options for audio extraction."""
+        """Optimized yt-dlp options for FAST audio extraction."""
         return {
             "format": "bestaudio/best",
             "outtmpl": str(self.download_dir / "%(id)s.%(ext)s"),
             "quiet": True,
             "no_warnings": True,
-            "socket_timeout": 60,
-            "retries": 3,
+            "socket_timeout": 30,
+            "retries": 2,
+            "nocheckcertificate": True,
+            "noplaylist": True,
+            "playlist_items": "1",
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",

@@ -12,6 +12,8 @@ from database.crud import (
     get_or_create_user,
     check_download_limit,
     increment_downloads,
+    save_user_search,
+    get_user_search,
 )
 from services.music_service import music_service, Track
 from services.cache_service import cache_service
@@ -23,8 +25,7 @@ from utils.i18n import t
 logger = logging.getLogger(__name__)
 router = Router(name="music_search")
 
-# In-memory search results cache (user_id -> search data)
-_search_cache: dict[int, dict] = {}
+# Persistent search results cache (user_id -> search data) is now in the database.
 
 TRACKS_PER_PAGE = 8
 
@@ -69,11 +70,8 @@ async def _do_search(
         )
         return
 
-    # Cache results for this user
-    _search_cache[message.from_user.id] = {
-        "query": query,
-        "tracks": all_tracks,
-    }
+    # Cache results for this user (persistently in DB)
+    await save_user_search(session, message.from_user.id, query, all_tracks)
 
     # Show first page
     page = 0
@@ -202,11 +200,13 @@ async def universal_search(message: Message, bot: Bot) -> None:
     await _do_search(message, text, bot)
 
 
-def get_search_cache(user_id: int) -> dict | None:
-    """Get cached search results for a user. Used by callbacks."""
-    return _search_cache.get(user_id)
+async def get_search_cache(user_id: int) -> dict | None:
+    """Get cached search results for a user from database. Used by callbacks."""
+    async with async_session() as session:
+        return await get_user_search(session, user_id)
 
 
 def clear_search_cache(user_id: int) -> None:
     """Clear cached search results for a user."""
-    _search_cache.pop(user_id, None)
+    # (Optional: can add a delete_user_search CRUD if needed)
+    pass

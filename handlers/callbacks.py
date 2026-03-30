@@ -19,6 +19,7 @@ from database.crud import (
     add_to_playlist,
     remove_from_playlist,
     get_playlist,
+    get_url_cache_item,
 )
 from services.music_service import music_service
 from services.cache_service import cache_service
@@ -36,7 +37,7 @@ from keyboards.inline import (
 )
 from keyboards.reply import main_menu_kb
 from config import config
-from utils.helpers import truncate, get_cached_url
+from utils.helpers import truncate
 from utils.i18n import t, get_language_flag
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ async def cb_track_select(callback: CallbackQuery, bot: Bot) -> None:
     page = int(parts[1])
     index = int(parts[2])
 
-    cache = get_search_cache(callback.from_user.id)
+    cache = await get_search_cache(callback.from_user.id)
     if not cache:
         await callback.answer("🔍 Поиск устарел. Повторите.", show_alert=True)
         return
@@ -176,7 +177,8 @@ async def cb_track_select(callback: CallbackQuery, bot: Bot) -> None:
 async def cb_video_to_mp3(callback: CallbackQuery, bot: Bot) -> None:
     """Extract audio from a previously downloaded video."""
     url_hash = callback.data.split(":")[1]
-    url = get_cached_url(url_hash)
+    async with async_session() as session:
+        url = await get_url_cache_item(session, url_hash)
 
     if not url:
         await callback.answer("⏳ Ссылка устарела. Отправь ссылку заново.", show_alert=True)
@@ -223,7 +225,8 @@ async def cb_video_to_mp3(callback: CallbackQuery, bot: Bot) -> None:
 async def cb_video_thumbnail(callback: CallbackQuery, bot: Bot) -> None:
     """Send the video thumbnail as a photo."""
     url_hash = callback.data.split(":")[1]
-    url = get_cached_url(url_hash)
+    async with async_session() as session:
+        url = await get_url_cache_item(session, url_hash)
 
     if not url:
         await callback.answer("⏳ Ссылка устарела.", show_alert=True)
@@ -269,7 +272,7 @@ async def cb_page(callback: CallbackQuery) -> None:
     query = parts[2]
     current_page = int(parts[3])
 
-    cache = get_search_cache(callback.from_user.id)
+    cache = await get_search_cache(callback.from_user.id)
     if not cache:
         await callback.answer("🔍 Поиск устарел.", show_alert=True)
         return
@@ -418,7 +421,7 @@ async def cb_language(callback: CallbackQuery) -> None:
 async def cb_add_to_playlist(callback: CallbackQuery) -> None:
     """Add a track to user's playlist."""
     track_hash = callback.data.split(":")[1]
-    cache = get_search_cache(callback.from_user.id)
+    cache = await get_search_cache(callback.from_user.id)
 
     title, artist = "Unknown", "Unknown"
     if cache:
@@ -582,7 +585,7 @@ async def cb_noop(callback: CallbackQuery) -> None:
 async def cb_more(callback: CallbackQuery) -> None:
     """Back to search results."""
     query = callback.data.split(":", 1)[1]
-    cache = get_search_cache(callback.from_user.id)
+    cache = await get_search_cache(callback.from_user.id)
     if not cache:
         await callback.answer("🔍 Повторите поиск", show_alert=True)
         return

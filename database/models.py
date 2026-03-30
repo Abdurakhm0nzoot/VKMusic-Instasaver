@@ -52,6 +52,34 @@ class User(Base):
     )
 
 
+class SearchResult(Base):
+    """Persistent search results for a user."""
+
+    __tablename__ = "search_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, unique=True, nullable=False, index=True
+    )
+    query: Mapped[str] = mapped_column(String(500), nullable=False)
+    results_json: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now(), server_default=func.now()
+    )
+
+
+class UrlCache(Base):
+    """Persistent URL mapping for buttons (survives restarts)."""
+
+    __tablename__ = "url_cache"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True) # Hash of URL
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), server_default=func.now()
+    )
+
+
 class FileCache(Base):
     """Smart Cache — maps content hash → Telegram file_id."""
 

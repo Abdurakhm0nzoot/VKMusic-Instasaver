@@ -1,11 +1,11 @@
-"""CRUD operations for database models."""
-
+import hashlib
+import json
 from datetime import date, datetime
 
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models import User, FileCache, PlaylistItem
+from database.models import User, FileCache, PlaylistItem, SearchResult, UrlCache, Track
 
 
 # ───────────────────────── User ─────────────────────────
@@ -238,4 +238,99 @@ async def remove_from_playlist(
     )
     result = await session.execute(stmt)
     await session.commit()
-    return result.rowcount > 0
+async def save_user_search(
+    session: AsyncSession, telegram_id: int, query: str, tracks: list[Track]
+) -> None:
+    """Save user's last search results to the database (survives restarts)."""
+    # Convert Track objects to dicts for JSON storage
+    tracks_data = [
+        {
+            "title": t.title,
+            "artist": t.artist,
+            "duration": t.duration,
+            "url": t.url,
+            "track_id": t.track_id,
+            "owner_id": t.owner_id,
+        }
+        for t in tracks
+    ]
+    results_json = json.dumps(tracks_data)
+
+    try:
+        # Use PostgreSQL UPSERT if possible
+        from sqlalchemy.dialects.postgresql import insert
+        stmt = insert(SearchResult).values(
+            user_id=telegram_id,
+            query=query,
+            results_json=results_json,
+            updated_at=datetime.now()
+        ).on_conflict_do_update(
+            index_elements=["user_id"],
+            set_={"query": query, "results_json": results_json, "updated_at": datetime.now()}
+        )
+        await session.execute(stmt)
+    except Exception:
+        # Fallback for SQLite or if PostgreSQL driver differs
+        stmt = select(SearchResult).where(SearchResult.user_id == telegram_id)
+        result = await session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record:
+            record.query = query
+            record.results_json = results_json
+            record.updated_at = datetime.now()
+        else:
+            record = SearchResult(user_id=telegram_id, query=query, results_json=results_json)
+            session.add(record)
+    
+    await session.commit()
+
+
+async def get_user_search(session: AsyncSession, telegram_id: int) -> dict | None:
+    """Retrieve user's last search results from the database."""
+    stmt = select(SearchResult).where(SearchResult.user_id == telegram_id)
+    result = await session.execute(stmt)
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        return None
+        
+    try:
+        tracks_data = json.loads(record.results_json)
+        tracks = [
+            Track(
+                title=d["title"],
+                artist=d["artist"],
+                duration=d["duration"],
+                url=d["url"],
+                track_id=d["track_id"],
+                owner_id=d.get("owner_id"),
+            )
+            for d in tracks_data
+        ]
+        return {"query": record.query, "tracks": tracks}
+    except Exception:
+        return None
+
+
+async def save_url_cache(session: AsyncSession, url: str) -> str:
+    """Save URL to persistent cache and return its md5 hash key."""
+    url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
+    
+    stmt = select(UrlCache).where(UrlCache.id == url_hash)
+    result = await session.execute(stmt)
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        record = UrlCache(id=url_hash, url=url)
+        session.add(record)
+        await session.commit()
+        
+    return url_hash
+
+
+async def get_url_cache_item(session: AsyncSession, url_hash: str) -> str | None:
+    """Retrieve URL from persistent cache by its hash."""
+    stmt = select(UrlCache).where(UrlCache.id == url_hash)
+    result = await session.execute(stmt)
+    record = result.scalar_one_or_none()
+    return record.url if record else None

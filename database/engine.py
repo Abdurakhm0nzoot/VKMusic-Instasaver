@@ -51,6 +51,21 @@ async def init_db() -> None:
         except Exception:
             pass
 
+        # === Search Results Persistent Cache ===
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS search_results (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT UNIQUE NOT NULL,
+                    query VARCHAR(500) NOT NULL,
+                    results_json TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+        except Exception:
+            # Table might already exist or SERIAL not supported (SQLite)
+            pass
+
 
 
 async def get_session() -> AsyncSession:
