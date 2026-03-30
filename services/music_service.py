@@ -11,25 +11,7 @@ from config import config
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class Track:
-    """Represents a music track."""
-    title: str
-    artist: str
-    duration: int  # seconds
-    url: str  # download URL or search query
-    track_id: str = ""  # unique identifier
-    owner_id: int = 0
-
-    @property
-    def display_name(self) -> str:
-        return f"{self.artist} — {self.title}"
-
-    @property
-    def duration_str(self) -> str:
-        minutes = self.duration // 60
-        seconds = self.duration % 60
-        return f"{minutes}:{seconds:02d}"
+from database.models import Track
 
 
 class MusicService:

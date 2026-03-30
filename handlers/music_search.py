@@ -15,7 +15,8 @@ from database.crud import (
     save_user_search,
     get_user_search,
 )
-from services.music_service import music_service, Track
+from database.models import Track
+from services.music_service import music_service
 from services.cache_service import cache_service
 from keyboards.inline import search_results_kb, track_actions_kb
 from config import config
