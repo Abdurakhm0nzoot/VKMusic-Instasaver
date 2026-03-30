@@ -67,53 +67,56 @@ async def main() -> None:
 
     # Установка команд и профиля на 3 языках
     from aiogram.types import BotCommand
-
-    # RU (Русский)
-    cmds_ru = [
-        BotCommand(command="start", description="🚀 Запуск бота"),
-        BotCommand(command="song", description="🎵 Поиск музыки"),
-        BotCommand(command="artist", description="🎤 Поиск по артисту"),
-        BotCommand(command="top", description="🔥 Популярные треки"),
-        BotCommand(command="my", description="📋 Мой плейлист"),
-        BotCommand(command="settings", description="⚙️ Настройки бота"),
-        BotCommand(command="help", description="ℹ️ Помощь с ботом"),
-    ]
-    await bot.set_my_commands(cmds_ru, language_code="ru")
-    await bot.set_my_commands(cmds_ru) # По умолчанию
     
-    # EN (English)
-    cmds_en = [
-        BotCommand(command="start", description="🚀 Start bot"),
-        BotCommand(command="song", description="🎵 Search music"),
-        BotCommand(command="artist", description="🎤 Search artist"),
-        BotCommand(command="top", description="🔥 Popular tracks"),
-        BotCommand(command="my", description="📋 My playlist"),
-        BotCommand(command="settings", description="⚙️ Bot settings"),
-        BotCommand(command="help", description="ℹ️ Help with bot"),
-    ]
-    await bot.set_my_commands(cmds_en, language_code="en")
+    logger.info(f"🤖 Запуск бота с ID: {config.BOT_TOKEN.split(':')[0]}")
 
-    # UZ (O'zbekcha)
-    cmds_uz = [
-        BotCommand(command="start", description="🚀 Botni ishga tushirish"),
-        BotCommand(command="song", description="🎵 Musiqa qidirish"),
-        BotCommand(command="artist", description="🎤 Artist bo'yicha qidirish"),
-        BotCommand(command="top", description="🔥 Mashhur treklar"),
-        BotCommand(command="my", description="📋 Mening pleylistim"),
-        BotCommand(command="settings", description="⚙️ Bot sozlamalari"),
-        BotCommand(command="help", description="ℹ️ Botda yordam"),
-    ]
-    await bot.set_my_commands(cmds_uz, language_code="uz")
-
-    # Описание профиля (Информация под аватаркой)
     try:
-        await bot.set_my_short_description("Слушай и скачивай любую музыку!\nСвязь и реклама: @твой_юзернейм", language_code="ru")
-        await bot.set_my_short_description("Listen to and download any music!\nContact & Ads: @your_username", language_code="en")
-        await bot.set_my_short_description("Istalgan musiqani tinglang va yuklab oling!\nAloqa uchun: @yozing", language_code="uz")
-    except Exception as e:
-        logger.warning(f"Could not set text descriptions: {e}")
+        # RU (Русский)
+        cmds_ru = [
+            BotCommand(command="start", description="🚀 Запуск бота"),
+            BotCommand(command="song", description="🎵 Поиск музыки"),
+            BotCommand(command="artist", description="🎤 Поиск по артисту"),
+            BotCommand(command="top", description="🔥 Популярные треки"),
+            BotCommand(command="my", description="📋 Мой плейлист"),
+            BotCommand(command="settings", description="⚙️ Настройки бота"),
+            BotCommand(command="help", description="ℹ️ Помощь с ботом"),
+        ]
+        await bot.set_my_commands(cmds_ru, language_code="ru")
+        await bot.set_my_commands(cmds_ru) # По умолчанию
+        
+        # EN (English)
+        cmds_en = [
+            BotCommand(command="start", description="🚀 Start bot"),
+            BotCommand(command="song", description="🎵 Search music"),
+            BotCommand(command="artist", description="🎤 Search artist"),
+            BotCommand(command="top", description="🔥 Popular tracks"),
+            BotCommand(command="my", description="📋 My playlist"),
+            BotCommand(command="settings", description="⚙️ Bot settings"),
+            BotCommand(command="help", description="ℹ️ Help with bot"),
+        ]
+        await bot.set_my_commands(cmds_en, language_code="en")
 
-    logger.info("✅ Bot commands and localized profiles set")
+        # UZ (O'zbekcha)
+        cmds_uz = [
+            BotCommand(command="start", description="🚀 Botni ishga tushirish"),
+            BotCommand(command="song", description="🎵 Musiqa qidirish"),
+            BotCommand(command="artist", description="🎤 Artist bo'yicha qidirish"),
+            BotCommand(command="top", description="🔥 Mashhur treklar"),
+            BotCommand(command="my", description="📋 Mening pleylistim"),
+            BotCommand(command="settings", description="⚙️ Bot sozlamalari"),
+            BotCommand(command="help", description="ℹ️ Botda yordam"),
+        ]
+        await bot.set_my_commands(cmds_uz, language_code="uz")
+
+        # Описание профиля
+        await bot.set_my_short_description("Слушай и скачивай любую музыку!", language_code="ru")
+        await bot.set_my_short_description("Listen to and download any music!", language_code="en")
+        await bot.set_my_short_description("Istalgan musiqani tinglang va yuklab oling!", language_code="uz")
+        
+        logger.info("✅ Bot commands and localized profiles set")
+    except Exception as e:
+        logger.error(f"❌ Failed to set commands or profile: {e}")
+        logger.info("⚠️ Continuing startup anyway...")
 
     # Запуск фонового веб-сервера для Render (чтобы бот не засыпал)
     from aiohttp import web
